@@ -47,3 +47,19 @@ Simulaatio on opetuksellinen havainnollistus, ei operatiivinen ennustetyökalu.
 - `js/sim.js` – simulaatiomalli (toimii selaimessa ja Node.js:ssä)
 - `js/app.js` – piirto ja vuorovaikutus
 - `test/sim.test.js` – mallin testit (`npm test`)
+
+## Julkaisu (GitHub Pages)
+
+Simulaattori on staattinen sivu, joten sen voi julkaista GitHub Pagesissa:
+
+1. Repositorion **Settings → Pages → Build and deployment**
+2. *Source*: **Deploy from a branch**, haara `ccr-32db7e51-wcwawz` (tai `main`), kansio `/ (root)` → **Save**
+3. Sivu ilmestyy osoitteeseen https://lazzinator.github.io/Maastopalon-levi-minen/
+
+Upotus toiselle sivustolle (esim. WordPressin *Mukautettu HTML* -lohko):
+
+```html
+<iframe src="https://lazzinator.github.io/Maastopalon-levi-minen/"
+        title="Maastopalon leviämissimulaattori"
+        style="width:100%; height:1150px; border:0;" loading="lazy"></iframe>
+```
