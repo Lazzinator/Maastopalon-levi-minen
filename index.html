@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="fi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Maastopalon leviäminen</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>🔥 Maastopalon leviämissimulaattori</h1>
+    <p class="sub">Klikkaa karttaa sytyttääksesi palon. Säädä tuulta, kosteutta ja torju paloa palokujilla tai vesipommituksella.</p>
+  </header>
+
+  <main>
+    <section class="map-wrap">
+      <canvas id="map" aria-label="Simulaatiokartta"></canvas>
+      <div id="hover" class="hover" hidden></div>
+    </section>
+
+    <aside class="panel">
+      <div class="group">
+        <div class="buttons">
+          <button id="play" class="primary" title="Välilyönti">▶ Käynnistä</button>
+          <button id="step" title="Yksi askel (S)">⏭ Askel</button>
+          <button id="reset" title="Sammuta kaikki (R)">↺ Nollaa palo</button>
+          <button id="newmap" title="Uusi kartta (N)">🗺 Uusi kartta</button>
+        </div>
+        <label class="row">Nopeus <input id="speed" type="range" min="1" max="60" value="12"><output id="speedOut"></output></label>
+      </div>
+
+      <div class="group">
+        <h2>Työkalu</h2>
+        <div class="tools" role="radiogroup">
+          <label><input type="radio" name="tool" value="ignite" checked> 🔥 Sytytä</label>
+          <label><input type="radio" name="tool" value="firebreak"> 🪓 Palokuja</label>
+          <label><input type="radio" name="tool" value="water"> 💧 Vesipommitus</label>
+        </div>
+        <label class="row">Sivellin <input id="brush" type="range" min="0" max="8" value="1"><output id="brushOut"></output></label>
+      </div>
+
+      <div class="group">
+        <h2>Sää</h2>
+        <div class="wind">
+          <canvas id="compass" width="96" height="96" title="Vedä asettaaksesi tuulen suunnan"></canvas>
+          <div class="wind-controls">
+            <label class="row">Tuuli <input id="windSpeed" type="range" min="0" max="25" step="0.5"><output id="windSpeedOut"></output></label>
+            <label class="row">Suunta <input id="windDir" type="range" min="0" max="359" step="1"><output id="windDirOut"></output></label>
+          </div>
+        </div>
+        <label class="row">Kosteus <input id="moisture" type="range" min="2" max="36" step="1"><output id="moistureOut"></output></label>
+        <label class="check"><input id="spotting" type="checkbox"> Kipinälento</label>
+        <label class="check"><input id="slope" type="checkbox"> Rinteiden vaikutus</label>
+      </div>
+
+      <div class="group">
+        <h2>Tilanne</h2>
+        <dl class="stats">
+          <dt>Aika</dt><dd id="sTime">0 min</dd>
+          <dt>Palaa nyt</dt><dd id="sBurning">0 ha</dd>
+          <dt>Palanut</dt><dd id="sBurnt">0 ha</dd>
+          <dt>Osuus palavasta maasta</dt><dd id="sPct">0 %</dd>
+        </dl>
+        <canvas id="chart" width="300" height="90" aria-label="Palanut ala ajan funktiona"></canvas>
+      </div>
+
+      <div class="group">
+        <h2>Maasto</h2>
+        <ul id="legend" class="legend"></ul>
+      </div>
+    </aside>
+  </main>
+
+  <footer>
+    Malli: soluautomaatti, tuuli- ja rinnekertoimet Alexandridis ym. (2008) mukaan. Ruutu = 10 × 10 m, askel = 1 min.
+    Simulaatio on havainnollistus, ei operatiivinen ennustetyökalu.
+  </footer>
+
+  <script src="js/sim.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

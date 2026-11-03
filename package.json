@@ -1,0 +1,11 @@
+{
+  "name": "maastopalon-leviaminen",
+  "version": "1.0.0",
+  "description": "Maastopalon leviämissimulaattori (soluautomaatti) selaimessa",
+  "private": true,
+  "scripts": {
+    "test": "node --test",
+    "start": "npx --yes http-server -c-1 -p 8080 ."
+  },
+  "license": "MIT"
+}
