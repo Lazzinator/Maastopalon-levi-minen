@@ -20,6 +20,15 @@
 
     <aside class="panel">
       <div class="group">
+        <label class="row map-row">Kartta
+          <select id="mapSelect" aria-label="Kartta">
+            <option value="random">Satunnainen</option>
+          </select>
+        </label>
+        <p id="mapInfo" class="map-info"></p>
+      </div>
+
+      <div class="group">
         <div class="buttons">
           <button id="play" class="primary" title="Välilyönti">▶ Käynnistä</button>
           <button id="step" title="Yksi askel (S)">⏭ Askel</button>
@@ -74,9 +83,15 @@
   <footer>
     Malli: soluautomaatti, tuuli- ja rinnekertoimet Alexandridis ym. (2008) mukaan. Ruutu = 10 × 10 m, askel = 1 min.
     Simulaatio on havainnollistus, ei operatiivinen ennustetyökalu.
+    <p class="attribution">
+      Korvaharjun kartta: Sisältää Maanmittauslaitoksen maastotietokannan, korkeusmallin ja ortokuvien aineistoa 11/2026
+      (<a href="https://creativecommons.org/licenses/by/4.0/deed.fi">CC BY 4.0</a>).
+      Maanpeiteluokitus on johdettu näistä aineistoista.
+    </p>
   </footer>
 
   <script src="js/sim.js"></script>
+  <script src="data/korvaharju.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

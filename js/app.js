@@ -4,21 +4,57 @@
 
   const { createSimulation, FUELS, Fuel, State, windVector } = window.FireSim;
 
-  const W = 160, H = 110, SCALE = 6;
+  const MAPS = window.FIRESIM_MAPS || {};
   const $ = (id) => document.getElementById(id);
 
-  const sim = createSimulation({ width: W, height: H, seed: randomSeed() });
+  let sim, W, H, SCALE;
+  let mapId = 'random';
 
   // ---------- Piirtopinnat ----------
   const map = $('map');
-  map.width = W * SCALE;
-  map.height = H * SCALE;
   const ctx = map.getContext('2d');
   const off = document.createElement('canvas');
-  off.width = W; off.height = H;
   const offCtx = off.getContext('2d');
-  const img = offCtx.createImageData(W, H);
-  let shade = new Float32Array(W * H);
+  let img;
+  let shade;
+
+  /** Luo simulaation valitulle kartalle ja mitoittaa piirtopinnat. */
+  function setupMap(id) {
+    const prevParams = sim ? Object.assign({}, sim.params) : undefined;
+    const data = id !== 'random' ? MAPS[id] : null;
+    mapId = data ? id : 'random';
+    sim = data
+      ? createSimulation({ map: data, seed: 1, params: prevParams })
+      : createSimulation({ width: 160, height: 110, seed: randomSeed(), params: prevParams });
+    W = sim.width; H = sim.height;
+    SCALE = Math.max(3, Math.floor(960 / W));
+    map.width = W * SCALE;
+    map.height = H * SCALE;
+    off.width = W; off.height = H;
+    img = offCtx.createImageData(W, H);
+    computeHillshade();
+    $('newmap').disabled = mapId !== 'random';
+    $('mapInfo').textContent = data ? mapInfoHtml(data) : 'Satunnaisesti generoitu maasto, 160 × 110 ruutua (1,6 × 1,1 km).';
+    window.__sim = sim; // virheenjäljitystä varten
+  }
+
+  function mapInfoHtml(d) {
+    const [e0, n0, e1, n1] = d.bbox;
+    const km = (m) => (m / 1000).toFixed(1).replace('.', ',');
+    return `${d.name}: ${d.width} × ${d.height} ruutua (${km(e1 - e0)} × ${km(n1 - n0)} km), `
+      + `ETRS-TM35FIN E ${e0}–${e1}, N ${n0}–${n1}. Korkeudet m mpy.`;
+  }
+
+  // Karttavalikko; kartan voi valita myös osoitteella ?kartta=korvaharju
+  const mapSelect = $('mapSelect');
+  for (const [id, m] of Object.entries(MAPS)) {
+    const o = document.createElement('option');
+    o.value = id; o.textContent = m.name;
+    mapSelect.appendChild(o);
+  }
+  const wanted = new URLSearchParams(location.search).get('kartta');
+  if (wanted && MAPS[wanted]) mapSelect.value = wanted;
+  setupMap(mapSelect.value);
 
   function randomSeed() { return (Math.random() * 2 ** 32) >>> 0; }
 
@@ -253,9 +289,17 @@
   $('step').addEventListener('click', () => { setPlaying(false); doStep(); updateStats(); });
   $('reset').addEventListener('click', () => { setPlaying(false); sim.resetFire(); updateStats(); });
   $('newmap').addEventListener('click', () => {
+    if (mapId !== 'random') return;
     setPlaying(false);
     sim.generate(randomSeed());
     computeHillshade();
+    updateStats();
+  });
+
+  // Karttavalinta
+  mapSelect.addEventListener('change', () => {
+    setPlaying(false);
+    setupMap(mapSelect.value);
     updateStats();
   });
 
@@ -325,7 +369,9 @@
     const i = c.y * W + c.x;
     const st = ['ei palanut', 'palaa', 'palanut'][sim.state[i]];
     hover.hidden = false;
-    hover.textContent = `${FUELS[sim.fuel[i]].name} · ${Math.round(sim.elevation[i])} m · ${st}`;
+    const c2 = sim.cellToMap(c.x, c.y);
+    const where = c2 ? ` · E ${Math.round(c2.e)} N ${Math.round(c2.n)}` : '';
+    hover.textContent = `${FUELS[sim.fuel[i]].name} · ${Math.round(sim.elevation[i])} m · ${st}${where}`;
   }
 
   map.addEventListener('pointerdown', (e) => {
@@ -355,9 +401,6 @@
     }
   });
 
-  computeHillshade();
   updateStats();
   requestAnimationFrame(loop);
-
-  window.__sim = sim; // virheenjäljitystä varten
 })();

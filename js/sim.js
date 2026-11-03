@@ -33,6 +33,8 @@
     { id: 5, key: 'mixed',     name: 'Sekametsä',       color: [82, 130, 70],   pBurn: 0.42, burnTime: 7,  spot: 0.5 },
     { id: 6, key: 'bog',       name: 'Suo',             color: [150, 132, 92], pBurn: 0.14, burnTime: 5,  spot: 0 },
     { id: 7, key: 'firebreak', name: 'Palokuja',        color: [150, 110, 72],  pBurn: 0.0,  burnTime: 0,  spot: 0 },
+    // Tiet, kentät, rakennukset, jätekeskus: lähes palamaton (pientareiden kasvillisuus).
+    { id: 8, key: 'urban',     name: 'Tie / rakennettu', color: [122, 122, 128], pBurn: 0.03, burnTime: 1,  spot: 0 },
   ]);
   const Fuel = Object.freeze(Object.fromEntries(FUELS.map((f) => [f.key.toUpperCase(), f.id])));
 
@@ -94,6 +96,46 @@
     return sum / norm;
   }
 
+  // ---------- Valmiit kartat ----------
+
+  function decodeBase64(str) {
+    if (typeof Buffer !== 'undefined') return new Uint8Array(Buffer.from(str, 'base64'));
+    const bin = atob(str);
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+
+  /**
+   * Purkaa valmiin kartan (esim. data/korvaharju.js) taulukoiksi.
+   * Hyväksyy joko koodatun muodon (base64: elevation Uint16 LE dm, fuel Uint8)
+   * tai suoraan taulukot { width, height, elevation: number[], fuel: number[] }.
+   */
+  function decodeMap(map) {
+    if (!map || !(map.width > 0) || !(map.height > 0)) throw new Error('Kartalta puuttuu koko');
+    const n = map.width * map.height;
+    let elevation, fuel;
+    if (typeof map.fuel === 'string') {
+      fuel = decodeBase64(map.fuel);
+      const eb = decodeBase64(map.elevation);
+      if (eb.length !== n * 2) throw new Error(`Korkeusdatan pituus ${eb.length / 2} ≠ ${n}`);
+      const base = map.elevationBase || 0, scale = map.elevationScale || 1;
+      elevation = new Float32Array(n);
+      for (let i = 0; i < n; i++) elevation[i] = base + (eb[2 * i] | (eb[2 * i + 1] << 8)) * scale;
+    } else {
+      fuel = Uint8Array.from(map.fuel);
+      elevation = Float32Array.from(map.elevation);
+    }
+    if (fuel.length !== n) throw new Error(`Maastotyyppidatan pituus ${fuel.length} ≠ ${n}`);
+    if (elevation.length !== n) throw new Error(`Korkeusdatan pituus ${elevation.length} ≠ ${n}`);
+    for (let i = 0; i < n; i++) if (fuel[i] >= FUELS.length) throw new Error(`Tuntematon maastotyyppi ${fuel[i]}`);
+    return {
+      id: map.id, name: map.name, width: map.width, height: map.height,
+      cellSize: map.cellSize || 10, bbox: map.bbox, crs: map.crs, sources: map.sources || [],
+      elevation, fuel,
+    };
+  }
+
   // ---------- Fysiikka ----------
 
   /** Tuulen menosuunnan yksikkövektori ruudukossa (y kasvaa etelään). */
@@ -127,9 +169,10 @@
   };
 
   function createSimulation(opts = {}) {
-    const width = opts.width || 160;
-    const height = opts.height || 110;
-    const cellSize = opts.cellSize || 10; // metriä
+    const map = opts.map ? decodeMap(opts.map) : null;
+    const width = map ? map.width : opts.width || 160;
+    const height = map ? map.height : opts.height || 110;
+    const cellSize = map ? map.cellSize : opts.cellSize || 10; // metriä
     const n = width * height;
 
     const sim = {
@@ -145,6 +188,7 @@
       time: 0,
       history: [],
       rand: mulberry32(opts.seed ?? 1),
+      map: map ? { id: map.id, name: map.name, bbox: map.bbox, crs: map.crs, sources: map.sources } : null,
     };
 
     sim.index = (x, y) => y * width + x;
@@ -179,6 +223,22 @@
       }
       sim.rand = mulberry32(sim.seed ^ 0x9e3779b9);
       sim.resetFire();
+    };
+
+    /** Lataa valmiin kartan (saman kokoinen kuin simulaatio). */
+    sim.loadMap = function (m) {
+      const d = m.elevation instanceof Float32Array && m.fuel instanceof Uint8Array ? m : decodeMap(m);
+      if (d.width !== width || d.height !== height) throw new Error('Kartan koko ei vastaa simulaatiota');
+      sim.elevation.set(d.elevation);
+      sim.fuel.set(d.fuel);
+      sim.resetFire();
+    };
+
+    /** Ruudun keskipisteen karttakoordinaatit (vain valmiilla kartalla). */
+    sim.cellToMap = function (x, y) {
+      if (!sim.map || !sim.map.bbox) return null;
+      const [e0, , , n1] = sim.map.bbox;
+      return { e: e0 + (x + 0.5) * cellSize, n: n1 - (y + 0.5) * cellSize };
     };
 
     sim.fill = function (fuelId, elevation = 0) {
@@ -351,13 +411,14 @@
       };
     };
 
-    if (opts.generate === false) sim.fill(opts.fillFuel ?? Fuel.GRASS);
+    if (map) sim.loadMap(map);
+    else if (opts.generate === false) sim.fill(opts.fillFuel ?? Fuel.GRASS);
     else sim.generate(sim.seed);
     return sim;
   }
 
   return {
     State, FUELS, Fuel, DEFAULT_PARAMS,
-    createSimulation, windVector, windFactor, slopeFactor, moistureFactor, mulberry32,
+    createSimulation, decodeMap, windVector, windFactor, slopeFactor, moistureFactor, mulberry32,
   };
 });
